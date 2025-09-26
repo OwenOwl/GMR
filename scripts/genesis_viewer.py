@@ -42,7 +42,7 @@ class GenesisViewer:
             quat = gu.R_to_quat(self.world_rotation @ gu.quat_to_R(cam_wxyz))
             camera = self.scene.add_entity(
                 gs.morphs.Box(
-                    size=(0.1, 0.1, 0.3),
+                    size=(0.1, 0.1, 0.2),
                     pos=pos,
                     quat=quat,
                     collision=False,

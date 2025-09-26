@@ -43,7 +43,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--server_ip", type=str, default="192.168.0.232")
-    parser.add_argument("--client_ip", type=str, default="192.168.0.143")
+    parser.add_argument("--client_ip", type=str, default="192.168.0.128")
     parser.add_argument("--use_multicast", type=bool, default=False)
     parser.add_argument("--robot", type=str, default="unitree_g1")
     args = parser.parse_args()
