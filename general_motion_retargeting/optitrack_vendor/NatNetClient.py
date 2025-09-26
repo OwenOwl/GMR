@@ -316,7 +316,8 @@ class NatNetClient:
             result = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
                                    socket.IPPROTO_UDP)
             try:
-                result.bind((self.local_ip_address, 0))
+                # result.bind((self.local_ip_address, 0))
+                result.bind(("0.0.0.0", 1511))
             except socket.error as e:
                 print(f'Socket error: {e}')
         return result

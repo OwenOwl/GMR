@@ -1,14 +1,19 @@
 from general_motion_retargeting.optitrack_vendor.NatNetClient import setup_optitrack
 from general_motion_retargeting import GeneralMotionRetargeting as GMR
-from general_motion_retargeting import RobotMotionViewer
+from genesis_viewer import GenesisViewer
 import threading
 import argparse
 
 def main(args):
-    # Check if firewall is disabled on this machine
-    print("Make sure to disable firewall on both machines:")
-    print("On OptiTrack computer: Disable Windows Firewall")
-    print("On this computer: sudo ufw disable")
+    retarget = GMR(
+            src_human="fbx",
+            tgt_robot=args.robot,
+            actual_human_height=1.85,
+        )
+    
+    genesis_env = GenesisViewer()
+    genesis_env.initialize_robot(mujoco_model=retarget.model)
+    genesis_env.build()
 
     client = setup_optitrack(
         server_address=args.server_ip,
@@ -27,23 +32,12 @@ def main(args):
     print(f"OptiTrack client connected: {client.connected()}")
     print("Starting motion retargeting...")
 
-    retarget = GMR(
-            src_human="fbx",
-            tgt_robot=args.robot,
-            actual_human_height=1.6,
-        )
-    viewer = RobotMotionViewer(robot_type="unitree_g1")
-
     while True:
         frame = client.get_frame()
         frame_number = client.get_frame_number()
         qpos = retarget.retarget(frame)
-        viewer.step(
-            root_pos=qpos[:3],
-            root_rot=qpos[3:7],
-            dof_pos=qpos[7:],
-            rate_limit=False,
-        )
+        genesis_env.update_dof_pos(qpos)
+        genesis_env.step()
 
 
 if __name__ == "__main__":

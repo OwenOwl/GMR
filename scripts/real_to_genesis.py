@@ -1,14 +1,16 @@
+
 from general_motion_retargeting.optitrack_vendor.NatNetClient import setup_optitrack
 from general_motion_retargeting import GeneralMotionRetargeting as GMR
-from general_motion_retargeting import RobotMotionViewer
+from genesis_viewer import GenesisViewer
+from config import Camera_Calibrations, World_Rotation
 import threading
 import argparse
 
 def main(args):
-    # Check if firewall is disabled on this machine
-    print("Make sure to disable firewall on both machines:")
-    print("On OptiTrack computer: Disable Windows Firewall")
-    print("On this computer: sudo ufw disable")
+    genesis_env = GenesisViewer()
+    genesis_env.set_world_rotation(World_Rotation)
+    genesis_env.initialize_cameras(Camera_Calibrations)
+    genesis_env.build()
 
     client = setup_optitrack(
         server_address=args.server_ip,
@@ -24,32 +26,16 @@ def main(args):
         print("Failed to setup OptiTrack client")
         exit(1)
 
-    print(f"OptiTrack client connected: {client.connected()}")
-    print("Starting motion retargeting...")
-
-    retarget = GMR(
-            src_human="fbx",
-            tgt_robot=args.robot,
-            actual_human_height=1.6,
-        )
-    viewer = RobotMotionViewer(robot_type="unitree_g1")
-
     while True:
         frame = client.get_frame()
         frame_number = client.get_frame_number()
-        qpos = retarget.retarget(frame)
-        viewer.step(
-            root_pos=qpos[:3],
-            root_rot=qpos[3:7],
-            dof_pos=qpos[7:],
-            rate_limit=False,
-        )
+        genesis_env.step(qpos=None)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--server_ip", type=str, default="192.168.0.232")
-    parser.add_argument("--client_ip", type=str, default="192.168.0.143")
+    parser.add_argument("--client_ip", type=str, default="192.168.0.128")
     parser.add_argument("--use_multicast", type=bool, default=False)
     parser.add_argument("--robot", type=str, default="unitree_g1")
     args = parser.parse_args()
