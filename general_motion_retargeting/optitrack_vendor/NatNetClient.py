@@ -31,63 +31,7 @@ import general_motion_retargeting.optitrack_vendor.MoCapData as MoCapData
 from queue import Queue
 import numpy as np
 
-# set the offset here based on your own data
-offset = 0
-
-RIGID_BODY_ID_MAP = {
-    1+offset: "Hips",
-    2+offset: "Spine",
-    3+offset: "Spine1",
-    4+offset: "Neck",
-    5+offset: "Head",
-    6+offset: "LeftShoulder",
-    7+offset: "LeftArm",
-    8+offset: "LeftForeArm",
-    9+offset: "LeftHand",
-    10+offset: "RightShoulder",
-    11+offset: "RightArm",
-    12+offset: "RightForeArm",
-    13+offset: "RightHand",
-    14+offset: "LeftUpLeg",
-    15+offset: "LeftLeg",
-    16+offset: "LeftFoot",
-    17+offset: "LeftToeBase",
-    18+offset: "RightUpLeg",
-    19+offset: "RightLeg",
-    20+offset: "RightFoot",
-    21+offset: "RightToeBase",
-    22+offset: "LeftHandThumb1",
-    23+offset: "LeftHandThumb2",
-    24+offset: "LeftHandThumb3",
-    25+offset: "LeftHandIndex1",
-    26+offset: "LeftHandIndex2",
-    27+offset: "LeftHandIndex3",
-    28+offset: "LeftHandMiddle1",
-    29+offset: "LeftHandMiddle2",
-    30+offset: "LeftHandMiddle3",
-    31+offset: "LeftHandRing1",
-    32+offset: "LeftHandRing2",
-    33+offset: "LeftHandRing3",
-    34+offset: "LeftHandPinky1",
-    35+offset: "LeftHandPinky2",
-    36+offset: "LeftHandPinky3",
-    37+offset: "RightHandThumb1",
-    38+offset: "RightHandThumb2",
-    39+offset: "RightHandThumb3",
-    40+offset: "RightHandIndex1",
-    41+offset: "RightHandIndex2",
-    42+offset: "RightHandIndex3",
-    43+offset: "RightHandMiddle1",
-    44+offset: "RightHandMiddle2",
-    45+offset: "RightHandMiddle3",
-    46+offset: "RightHandRing1",
-    47+offset: "RightHandRing2",
-    48+offset: "RightHandRing3",
-    49+offset: "RightHandPinky1",
-    50+offset: "RightHandPinky2",
-    51+offset: "RightHandPinky3"
-}
-
+from .config import RIGID_BODY_ID_MAP
 
 def trace(*args):
     # uncomment the one you want to use
@@ -186,7 +130,7 @@ class NatNetClient:
         self.stop_threads = False
 
         self.rigid_body_id_map = RIGID_BODY_ID_MAP
-        self.data_queue = Queue(maxsize=10)
+        self.data_queue = Queue(maxsize=1)
 
     # Client/server message ids
     NAT_CONNECT = 0
@@ -2372,14 +2316,22 @@ class NatNetClient:
 
         # mocap_data = self.mocap_queue.queue[-1]
         self.latest_frame_number = mocap_data.prefix_data.frame_number
-        skeleton = mocap_data.skeleton_data.skeleton_list[0]
-
         frame = {}
-        for rb in skeleton.rigid_body_list:
+
+        if len(mocap_data.skeleton_data.skeleton_list) > 0:
+            skeleton = mocap_data.skeleton_data.skeleton_list[0]
+            for rb in skeleton.rigid_body_list:
+                if rb.id_num in self.rigid_body_id_map:
+                    frame[self.rigid_body_id_map[rb.id_num]] = [rb.pos, np.roll(rb.rot, 1)]
+                else:
+                    print(f"unmatched skeleton link rb.id_num: {rb.id_num}")
+        
+        rigid_body = mocap_data.rigid_body_data
+        for rb in rigid_body.rigid_body_list:
             if rb.id_num in self.rigid_body_id_map:
                 frame[self.rigid_body_id_map[rb.id_num]] = [rb.pos, np.roll(rb.rot, 1)]
             else:
-                print(f"rb.id_num: {rb.id_num}")
+                print(f"unmatched rigid body rb.id_num: {rb.id_num}")
 
         return frame
 

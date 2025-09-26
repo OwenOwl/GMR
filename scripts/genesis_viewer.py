@@ -4,7 +4,7 @@ import numpy as np
 from genesis.utils import geom as gu
 
 class GenesisViewer:
-    def __init__(self):
+    def __init__(self, visualize=True):
         # Genesis initialization
         gs.init(backend=gs.gpu)
 
@@ -13,8 +13,10 @@ class GenesisViewer:
                 camera_pos=(3.5, 0.0, 2.0),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=40,
+                max_FPS=600,
             ),
-            show_viewer=True,
+            show_viewer=visualize,
+            show_FPS=False,
         )
 
         self.plane = self.scene.add_entity(
@@ -23,6 +25,8 @@ class GenesisViewer:
 
         self.robot = None
         self.robot_dofs = None
+
+        self.rigid_bodies = {}
 
         self.world_rotation = np.array([
             [1.0, 0.0, 0.0],
@@ -35,10 +39,33 @@ class GenesisViewer:
     def set_world_rotation(self, rotation_matrix):
         self.world_rotation = np.array(rotation_matrix)
     
+    def initialize_rigid_body_by_name(self, name, mode="Sphere", asset=None):
+        if mode == "Sphere":
+            rigid_body = self.scene.add_entity(
+                gs.morphs.Sphere(
+                    radius=0.05,
+                    pos=(0.0, 0.0, 0.0),
+                    collision=False,
+                    fixed=True,
+                )
+            )
+        elif mode == "Test_Block":
+            rigid_body = self.scene.add_entity(
+                gs.morphs.Box(
+                    size=(0.3, 0.1, 0.1),
+                    pos=(0.0, 0.0, 0.0),
+                    collision=False,
+                    fixed=True,
+                )
+            )
+        else:
+            raise NotImplementedError(f"Rigid mode {mode} not implemented!")
+        self.rigid_bodies[name] = rigid_body
+
     def initialize_cameras(self, camera_calibrations):
         for cam in camera_calibrations:
             pos = self.world_rotation @ np.array(cam["Position"])
-            cam_wxyz = np.array(cam["Orientation"][3:] + cam["Orientation"][:3])
+            cam_wxyz = np.roll(np.array(cam["Orientation"]), 1)
             quat = gu.R_to_quat(self.world_rotation @ gu.quat_to_R(cam_wxyz))
             camera = self.scene.add_entity(
                 gs.morphs.Box(
@@ -75,5 +102,17 @@ class GenesisViewer:
         self.robot.set_quat(dof_pos[3:7])
         self.robot.set_dofs_position(dof_pos[7:], dofs_idx_local=self.robot_dofs)
     
+    def update_rigid_body_by_name(self, name, pos, quat):
+        if name not in self.rigid_bodies:
+            print(f"Rigid body {name} not found!")
+            return
+        self.rigid_bodies[name].set_pos(pos)
+        self.rigid_bodies[name].set_quat(quat)
+    
+    def update_rigid_bodies(self, frame):
+        for name, (pos, quat) in frame.items():
+            if name in self.rigid_bodies:
+                self.update_rigid_body_by_name(name, pos, quat)
+
     def step(self, dof_pos=None):
         self.scene.step()

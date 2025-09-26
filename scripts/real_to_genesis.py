@@ -7,9 +7,12 @@ import threading
 import argparse
 
 def main(args):
-    genesis_env = GenesisViewer()
+    genesis_env = GenesisViewer(visualize=True)
     genesis_env.set_world_rotation(World_Rotation)
     genesis_env.initialize_cameras(Camera_Calibrations)
+
+    genesis_env.initialize_rigid_body_by_name("TestBlock1", mode="Test_Block")
+
     genesis_env.build()
 
     client = setup_optitrack(
@@ -29,7 +32,10 @@ def main(args):
     while True:
         frame = client.get_frame()
         frame_number = client.get_frame_number()
-        genesis_env.step(qpos=None)
+
+        genesis_env.update_rigid_bodies(frame)
+
+        genesis_env.step()
 
 
 if __name__ == "__main__":
