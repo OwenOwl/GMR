@@ -40,7 +40,9 @@ if __name__ == "__main__":
         tgt_robot=args.robot,
     )
     
-    genesis_env = GenesisViewer(mujoco_model = retarget.model)  
+    genesis_env = GenesisViewer()
+    genesis_env.initialize_robot(mujoco_model=retarget.model)
+    genesis_env.build()
     
     # Start the viewer
     i = 0
@@ -60,4 +62,5 @@ if __name__ == "__main__":
         qpos = retarget.retarget(smplx_data)
 
         # visualize
-        genesis_env.step(qpos)
+        genesis_env.update_dof_pos(qpos)
+        genesis_env.step()
