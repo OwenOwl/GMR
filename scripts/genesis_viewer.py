@@ -28,16 +28,9 @@ class GenesisViewer:
 
         self.rigid_bodies = {}
 
-        self.world_rotation = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-        ])
-
+        # Only camera related
+        self.world_rotation = np.eye(3)
         self.cameras = []
-    
-    def set_world_rotation(self, rotation_matrix):
-        self.world_rotation = np.array(rotation_matrix)
     
     def initialize_rigid_body_by_name(self, name, mode="Sphere", asset=None):
         if mode == "Sphere":
@@ -62,7 +55,8 @@ class GenesisViewer:
             raise NotImplementedError(f"Rigid mode {mode} not implemented!")
         self.rigid_bodies[name] = rigid_body
 
-    def initialize_cameras(self, camera_calibrations):
+    def initialize_cameras(self, camera_calibrations, rotation_matrix):
+        self.world_rotation = np.array(rotation_matrix)
         for cam in camera_calibrations:
             pos = self.world_rotation @ np.array(cam["Position"])
             cam_wxyz = np.roll(np.array(cam["Orientation"]), 1)

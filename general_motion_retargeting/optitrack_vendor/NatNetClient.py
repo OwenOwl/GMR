@@ -31,7 +31,7 @@ import general_motion_retargeting.optitrack_vendor.MoCapData as MoCapData
 from queue import Queue
 import numpy as np
 
-from .config import RIGID_BODY_ID_MAP
+from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP
 
 def trace(*args):
     # uncomment the one you want to use

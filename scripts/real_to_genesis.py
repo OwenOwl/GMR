@@ -2,14 +2,14 @@
 from general_motion_retargeting.optitrack_vendor.NatNetClient import setup_optitrack
 from general_motion_retargeting import GeneralMotionRetargeting as GMR
 from genesis_viewer import GenesisViewer
-from config import Camera_Calibrations, World_Rotation
 import threading
 import argparse
 
 def main(args):
     genesis_env = GenesisViewer(visualize=True)
-    genesis_env.set_world_rotation(World_Rotation)
-    genesis_env.initialize_cameras(Camera_Calibrations)
+
+    from general_motion_retargeting.config.camera_config import Camera_Calibrations, World_Rotation
+    genesis_env.initialize_cameras(Camera_Calibrations, World_Rotation)
 
     genesis_env.initialize_rigid_body_by_name("TestBlock1", mode="Test_Block")
 

@@ -1,4 +1,4 @@
-offset = 0 # Set if unmatched skeleton ID
+offset = 16384 # Set if unmatched skeleton ID
 
 RIGID_BODY_ID_MAP = {
     66: "TestBlock1",
