@@ -130,7 +130,7 @@ class NatNetClient:
         self.stop_threads = False
 
         self.rigid_body_id_map = RIGID_BODY_ID_MAP
-        self.data_queue = Queue(maxsize=1)
+        self.data_queue = Queue(maxsize=10)
 
     # Client/server message ids
     NAT_CONNECT = 0

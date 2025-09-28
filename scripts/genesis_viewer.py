@@ -2,6 +2,7 @@ import genesis as gs
 import mujoco as mj
 import numpy as np
 from genesis.utils import geom as gu
+from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP, RIGID_BODY_OFFSET
 
 class GenesisViewer:
     def __init__(self, visualize=True):
@@ -27,33 +28,52 @@ class GenesisViewer:
         self.robot_dofs = None
 
         self.rigid_bodies = {}
+        self.rigid_body_offsets = {}
 
         # Only camera related
         self.world_rotation = np.eye(3)
         self.cameras = []
     
-    def initialize_rigid_body_by_name(self, name, mode="Sphere", asset=None):
+    def load_rigid_body_by_name(self, name, mode="Sphere", params={}, offset=None):
+        rigid_body = None
         if mode == "Sphere":
             rigid_body = self.scene.add_entity(
                 gs.morphs.Sphere(
-                    radius=0.05,
+                    radius=params.get("radius", 0.05),
                     pos=(0.0, 0.0, 0.0),
                     collision=False,
                     fixed=True,
-                )
+                ),
+                surface=gs.surfaces.Plastic(
+                    color=params.get("color", (1.0, 1.0, 1.0)),
+                ),
             )
-        elif mode == "Test_Block":
+        elif mode == "Box":
             rigid_body = self.scene.add_entity(
                 gs.morphs.Box(
-                    size=(0.3, 0.1, 0.1),
+                    size=params.get("size", (0.1, 0.1, 0.1)),
                     pos=(0.0, 0.0, 0.0),
                     collision=False,
                     fixed=True,
-                )
+                ),
+                surface=gs.surfaces.Plastic(
+                    color=params.get("color", (1.0, 1.0, 1.0)),
+                ),
             )
         else:
             raise NotImplementedError(f"Rigid mode {mode} not implemented!")
         self.rigid_bodies[name] = rigid_body
+
+        if offset is not None:
+            self.rigid_body_offsets[name] = {
+                "pos": np.array(offset["pos"]),
+                "quat": np.array(offset["quat"]),
+            }
+        else:
+            self.rigid_body_offsets[name] = {
+                "pos": np.array([0.0, 0.0, 0.0]),
+                "quat": np.array([1.0, 0.0, 0.0, 0.0])
+            }
 
     def initialize_cameras(self, camera_calibrations, rotation_matrix):
         self.world_rotation = np.array(rotation_matrix)
@@ -63,12 +83,15 @@ class GenesisViewer:
             quat = gu.R_to_quat(self.world_rotation @ gu.quat_to_R(cam_wxyz))
             camera = self.scene.add_entity(
                 gs.morphs.Box(
-                    size=(0.1, 0.1, 0.2),
+                    size=(0.1, 0.1, 0.15),
                     pos=pos,
                     quat=quat,
                     collision=False,
                     fixed=True,
-                )
+                ),
+                surface=gs.surfaces.Plastic(
+                    color=(0.5, 0.0, 1.0),
+                ),
             )
             self.cameras.append(camera)
     
@@ -100,9 +123,16 @@ class GenesisViewer:
         if name not in self.rigid_bodies:
             print(f"Rigid body {name} not found!")
             return
-        self.rigid_bodies[name].set_pos(pos)
-        self.rigid_bodies[name].set_quat(quat)
-    
+        # aligned = pose * offset. Transform(v, u) = u * v
+        aligned_pos = gu.transform_by_quat(
+            self.rigid_body_offsets[name]["pos"], quat
+        ) + pos
+        aligned_quat = gu.transform_quat_by_quat(
+            self.rigid_body_offsets[name]["quat"], quat
+        )
+        self.rigid_bodies[name].set_pos(aligned_pos)
+        self.rigid_bodies[name].set_quat(aligned_quat)
+
     def update_rigid_bodies(self, frame):
         for name, (pos, quat) in frame.items():
             if name in self.rigid_bodies:
@@ -110,3 +140,40 @@ class GenesisViewer:
 
     def step(self, dof_pos=None):
         self.scene.step()
+
+
+
+    ''' Only for testing / debugging purposes '''
+
+    def test_setup(self, args):
+        block_size = (0.36, 0.08, 0.04)
+        self.load_rigid_body_by_name(
+            "TestBlock1",
+            mode="Box",
+            params={"size": block_size, "color": (241./255, 198./255, 136./255)},
+            offset=RIGID_BODY_OFFSET["TestBlock1"]
+        )
+        if args.get_offset:
+            self.target = {}
+            self.target["TestBlock1"] = self.scene.add_entity(
+                gs.morphs.Box(
+                    size=block_size,
+                    pos=(0.0, 0.0, block_size[2] / 2),
+                    collision=False,
+                    fixed=True,
+                )
+            )
+    
+    def get_offset(self, name):
+        target_pos = self.target[name].get_pos().cpu().numpy()
+        target_quat = self.target[name].get_quat().cpu().numpy()
+        pos = self.rigid_bodies[name].get_pos().cpu().numpy()
+        quat = self.rigid_bodies[name].get_quat().cpu().numpy()
+        # offset = pose^T * aligned. Transform(v, u) = u * v
+        offset_pos = gu.transform_by_quat(
+            target_pos, gu.inv_quat(quat)
+        ) - pos
+        offset_quat = gu.transform_quat_by_quat(
+            target_quat, gu.inv_quat(quat)
+        )
+        return offset_pos, offset_quat
