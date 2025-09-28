@@ -1,7 +1,17 @@
 offset = 16384 # Set if unmatched skeleton ID
 
 RIGID_BODY_ID_MAP = {
+    # Real to Sim Rigid
+    # G1
+    257: "pelvis_contour_link",
+    258: "torso_link",
+    259: "left_rubber_hand",
+    260: "right_rubber_hand",
+    261: "left_ankle_roll_link",
+    262: "right_ankle_roll_link",
+    # Test
     66: "TestBlock1",
+
     # Skeleton
     1+offset: "Hips",
     2+offset: "Spine",
@@ -57,8 +67,43 @@ RIGID_BODY_ID_MAP = {
 }
 
 RIGID_BODY_OFFSET = {
+    # G1
+    "pelvis_contour_link": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    "torso_link": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    "left_rubber_hand": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    "right_rubber_hand": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    "left_ankle_roll_link": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    "right_ankle_roll_link": {
+        "pos": [0.0, 0.0, 0.0],
+        "quat": [1.0, 0.0, 0.0, 0.0],
+    },
+    # Test
     "TestBlock1": {
         "pos": [0.037663523107767105, -0.016602158546447754, -0.025377647951245308],
         "quat": [-0.9995198249816895, 0.02422565594315529, -0.009033978916704655, -0.017079846933484077],
-    }
+    },
 }
+
+G1_TRACKED_LINK_NAMES = [
+    "pelvis_contour_link",
+    "torso_link",
+    "left_rubber_hand",
+    "right_rubber_hand",
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+]

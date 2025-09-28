@@ -2,7 +2,7 @@ import genesis as gs
 import mujoco as mj
 import numpy as np
 from genesis.utils import geom as gu
-from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP, RIGID_BODY_OFFSET
+from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP, RIGID_BODY_OFFSET, G1_TRACKED_LINK_NAMES
 
 class GenesisViewer:
     def __init__(self, visualize=True):
@@ -11,10 +11,14 @@ class GenesisViewer:
 
         self.scene = gs.Scene(
             viewer_options=gs.options.ViewerOptions(
+                res=(400, 300),
                 camera_pos=(3.5, 0.0, 2.0),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=40,
                 max_FPS=600,
+            ),
+            sim_options=gs.options.SimOptions(
+                gravity=(0.0, 0.0, 0.0),
             ),
             show_viewer=visualize,
             show_FPS=False,
@@ -29,6 +33,7 @@ class GenesisViewer:
 
         self.rigid_bodies = {}
         self.rigid_body_offsets = {}
+        self.target = {}
 
         # Only camera related
         self.world_rotation = np.eye(3)
@@ -57,6 +62,20 @@ class GenesisViewer:
                     fixed=True,
                 ),
                 surface=gs.surfaces.Plastic(
+                    color=params.get("color", (1.0, 1.0, 1.0)),
+                ),
+            )
+        elif mode == "File":
+            rigid_body = self.scene.add_entity(
+                gs.morphs.Mesh(
+                    file=params.get("path"),
+                    scale=1.0,
+                    pos=(0.0, 0.0, 0.0),
+                    quat=(1.0, 0.0, 0.0, 0.0),
+                    collision=False,
+                    fixed=True,
+                ),
+                surface=gs.surfaces.Metal(
                     color=params.get("color", (1.0, 1.0, 1.0)),
                 ),
             )
@@ -97,7 +116,12 @@ class GenesisViewer:
     
     def initialize_robot(self, mujoco_model=None):
         self.robot = self.scene.add_entity(
-            gs.morphs.MJCF(file="xml/unitree_g1/g1_mocap_29dof.xml", scale=1.0, collision=True)
+            gs.morphs.MJCF(
+                file="xml/unitree_g1/g1_mocap_29dof.xml",
+                pos=(-2, 0, 0),
+                scale=1.0,
+                collision=False,
+            )
         )
         if mujoco_model is None:
             self.robot_dofs = list(range(6, 35))
@@ -138,7 +162,7 @@ class GenesisViewer:
             if name in self.rigid_bodies:
                 self.update_rigid_body_by_name(name, pos, quat)
 
-    def step(self, dof_pos=None):
+    def step(self):
         self.scene.step()
 
 
@@ -154,7 +178,6 @@ class GenesisViewer:
             offset=RIGID_BODY_OFFSET["TestBlock1"]
         )
         if args.get_offset:
-            self.target = {}
             self.target["TestBlock1"] = self.scene.add_entity(
                 gs.morphs.Box(
                     size=block_size,
@@ -164,16 +187,32 @@ class GenesisViewer:
                 )
             )
     
-    def get_offset(self, name):
-        target_pos = self.target[name].get_pos().cpu().numpy()
-        target_quat = self.target[name].get_quat().cpu().numpy()
-        pos = self.rigid_bodies[name].get_pos().cpu().numpy()
-        quat = self.rigid_bodies[name].get_quat().cpu().numpy()
-        # offset = pose^T * aligned. Transform(v, u) = u * v
-        offset_pos = gu.transform_by_quat(
-            target_pos, gu.inv_quat(quat)
-        ) - pos
-        offset_quat = gu.transform_quat_by_quat(
-            target_quat, gu.inv_quat(quat)
-        )
-        return offset_pos, offset_quat
+    def debug_g1_setup(self, args):
+        for name in G1_TRACKED_LINK_NAMES:
+            self.load_rigid_body_by_name(
+                name,
+                mode="File",
+                params={"path": f"xml/unitree_g1/meshes/{name}.STL", "color": (0.8, 0.0, 0.0)},
+                offset=RIGID_BODY_OFFSET[name]
+            )
+        if args.get_offset:
+            self.initialize_robot()
+            for name in G1_TRACKED_LINK_NAMES:
+                self.target[name] = self.robot.get_link(name)
+
+    def get_offsets(self, frame):
+        for name, (_, _) in frame.items():
+            if name not in self.rigid_bodies or name not in self.target:
+                continue
+            target_pos = self.target[name].get_pos().cpu().numpy()
+            target_quat = self.target[name].get_quat().cpu().numpy()
+            pos = self.rigid_bodies[name].get_pos().cpu().numpy()
+            quat = self.rigid_bodies[name].get_quat().cpu().numpy()
+            # offset = pose^T * aligned. Transform(v, u) = u * v
+            offset_pos = gu.transform_by_quat(
+                target_pos, gu.inv_quat(quat)
+            ) - pos
+            offset_quat = gu.transform_quat_by_quat(
+                target_quat, gu.inv_quat(quat)
+            )
+            print(f'''\n"{name}": {{\n    "pos": {offset_pos.tolist()},\n    "quat": {offset_quat.tolist()},\n}}''')

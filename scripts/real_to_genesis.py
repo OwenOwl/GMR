@@ -12,6 +12,7 @@ def main(args):
     genesis_env.initialize_cameras(Camera_Calibrations, World_Rotation)
 
     genesis_env.test_setup(args)
+    genesis_env.debug_g1_setup(args)
 
     genesis_env.build()
 
@@ -41,10 +42,8 @@ def main(args):
         genesis_env.update_rigid_bodies(frame)
 
         if args.get_offset and tic % 100 == 0:
-            for name, (_, _) in frame.items():
-                offset_pos, offset_quat = genesis_env.get_offset(name)
-                print(f'''\n"{name}": {{\n    "pos": {offset_pos.tolist()},\n    "quat": {offset_quat.tolist()},\n}}''')
-
+            genesis_env.get_offsets(frame)
+        
         genesis_env.step()
 
 
