@@ -130,7 +130,7 @@ class NatNetClient:
         self.stop_threads = False
 
         self.rigid_body_id_map = RIGID_BODY_ID_MAP
-        self.data_queue = Queue(maxsize=10)
+        self.data_queue = Queue(maxsize=1)
 
     # Client/server message ids
     NAT_CONNECT = 0
@@ -2088,7 +2088,10 @@ class NatNetClient:
 
             offset_tmp, mocap_data = self.__unpack_mocap_data(data[offset:], packet_size, major, minor) #type: ignore  # noqa E501
             offset += offset_tmp
-            self.data_queue.put(mocap_data, block=True)
+            try:
+                self.data_queue.put(mocap_data, block=False) # Force no wait
+            except Exception as e:
+                pass
             # get a string version of the data for output
             if print_level >= 1:
                 mocap_data_str = mocap_data.get_as_string()

@@ -11,17 +11,18 @@ class GenesisViewer:
 
         self.scene = gs.Scene(
             viewer_options=gs.options.ViewerOptions(
-                res=(400, 300),
+                res=(1920, 1080),
                 camera_pos=(3.5, 0.0, 2.0),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=40,
-                max_FPS=600,
+                refresh_rate=60,
+                max_FPS=None,
             ),
             sim_options=gs.options.SimOptions(
                 gravity=(0.0, 0.0, 0.0),
             ),
             show_viewer=visualize,
-            show_FPS=False,
+            show_FPS=True,
         )
 
         self.plane = self.scene.add_entity(
@@ -210,9 +211,9 @@ class GenesisViewer:
             quat = self.rigid_bodies[name].get_quat().cpu().numpy()
             # offset = pose^T * aligned. Transform(v, u) = u * v
             offset_pos = gu.transform_by_quat(
-                target_pos, gu.inv_quat(quat)
-            ) - pos
+                target_pos - pos, gu.inv_quat(quat)
+            )
             offset_quat = gu.transform_quat_by_quat(
                 target_quat, gu.inv_quat(quat)
             )
-            print(f'''\n"{name}": {{\n    "pos": {offset_pos.tolist()},\n    "quat": {offset_quat.tolist()},\n}}''')
+            print(f'''\n"{name}": {{\n    "pos": {offset_pos.tolist()},\n    "quat": {offset_quat.tolist()},\n}},''')
