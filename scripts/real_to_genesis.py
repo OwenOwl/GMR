@@ -11,10 +11,10 @@ def main(args):
     from general_motion_retargeting.config.camera_config import Camera_Calibrations, World_Rotation
     genesis_env.initialize_cameras(Camera_Calibrations, World_Rotation)
 
-    genesis_env.test_setup(args)
-    genesis_env.debug_g1_setup(args)
-
-    genesis_env.build()
+    if args.get_offset:
+        genesis_env.Real2Sim_offset_setup(args)
+    else:
+        genesis_env.Real2Sim_setup(args)
 
     client = setup_optitrack(
         server_address=args.server_ip,
@@ -39,12 +39,12 @@ def main(args):
         if tic == 1:
             print(f"Data received! First frame number: {frame_number}")
 
-        genesis_env.update_rigid_bodies(frame)
-
-        if args.get_offset and tic % 100 == 0:
-            genesis_env.get_offsets(frame)
-        
-        genesis_env.step()
+        if args.get_offset:
+            offset = genesis_env.Real2Sim_offset_step(frame)
+            if tic % 100 == 0:
+                print(offset)
+        else:
+            genesis_env.Real2Sim_step(frame)
 
 
 if __name__ == "__main__":

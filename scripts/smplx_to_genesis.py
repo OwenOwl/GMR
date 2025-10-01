@@ -41,8 +41,7 @@ if __name__ == "__main__":
     )
     
     genesis_env = GenesisViewer()
-    genesis_env.initialize_robot(mujoco_model=retarget.model)
-    genesis_env.build()
+    genesis_env.MoCap_setup(args=args, mujoco_model=retarget.model)
     
     # Start the viewer
     i = 0
@@ -62,5 +61,4 @@ if __name__ == "__main__":
         qpos = retarget.retarget(smplx_data)
 
         # visualize
-        genesis_env.update_dof_pos(qpos)
-        genesis_env.step()
+        genesis_env.MoCap_step(qpos)

@@ -12,8 +12,7 @@ def main(args):
         )
     
     genesis_env = GenesisViewer()
-    genesis_env.initialize_robot(mujoco_model=retarget.model)
-    genesis_env.build()
+    genesis_env.MoCap_setup(args=args, mujoco_model=retarget.model)
 
     client = setup_optitrack(
         server_address=args.server_ip,
@@ -36,8 +35,8 @@ def main(args):
         frame = client.get_frame()
         frame_number = client.get_frame_number()
         qpos = retarget.retarget(frame)
-        genesis_env.update_dof_pos(qpos)
-        genesis_env.step()
+        
+        genesis_env.MoCap_step(qpos)
 
 
 if __name__ == "__main__":
