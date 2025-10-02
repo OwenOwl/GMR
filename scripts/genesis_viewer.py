@@ -2,7 +2,7 @@ import genesis as gs
 import mujoco as mj
 import numpy as np
 from genesis.utils import geom as gu
-from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP, RIGID_BODY_OFFSET, G1_TRACKED_LINK_NAMES
+from general_motion_retargeting.config.rb_config import RIGID_BODY_ID_MAP, RIGID_BODY_OFFSET, G1_HEIGHT, G1_TRACKED_LINK_NAMES, G1_IK_TABLES
 
 class GenesisViewer:
     def __init__(self, visualize=True):
@@ -155,15 +155,22 @@ class GenesisViewer:
     def ik_dof_pos(self):
         if self.robot is None:
             return
-        links = [self.robot.get_link(name) for name in G1_TRACKED_LINK_NAMES]
-        poss = [self._get_pos_by_name(name) for name in G1_TRACKED_LINK_NAMES]
-        quats = [self._get_quat_by_name(name) for name in G1_TRACKED_LINK_NAMES]
-        qpos = self.robot.inverse_kinematics_multilink(
-            links=links,
-            poss=poss,
-            quats=quats,
-        )
-        self.update_dof_pos(qpos)
+        for name, ik_joints in G1_IK_TABLES.items():
+            link = self.robot.get_link(name)
+            pos = self._get_pos_by_name(name)
+            quat = self._get_quat_by_name(name)
+            if ik_joints[0] == "pelvis":
+                self.robot.set_pos(pos)
+                self.robot.set_quat(quat)
+            else:
+                ik_masks = [self.robot.get_joint(joint).dofs_idx_local[0] for joint in ik_joints]
+                qpos = self.robot.inverse_kinematics(
+                    link=link,
+                    pos=pos,
+                    quat=quat,
+                    dofs_idx_local=ik_masks
+                )
+                self.update_dof_pos(qpos)
 
     def update_rigid_body_by_name(self, name, pos, quat):
         if name not in self.rigid_bodies:
@@ -274,7 +281,7 @@ class GenesisViewer:
         self.step()
     
     def Real2Sim_setup(self, args):
-        self.g1_links_setup_offset() # temp
+        self.g1_links_setup_virtual()
         self.initialize_robot(mujoco_model=None)
         self.build()
     
